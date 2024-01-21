@@ -1,0 +1,11 @@
+[package]
+name = "game-prices-rs"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+axum = "0.7.4"
+tokio = { version = "1.35.1", features = ["full"] }
+tower = "0.4.13"
+diesel = { version = "2.1.4", features = ["postgres"] }
+dotenvy = "0.15.7"
