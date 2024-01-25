@@ -33,9 +33,9 @@ pub struct Currency {
 
 #[derive(Queryable, Selectable, Identifiable, Associations)]
 #[diesel(table_name = purchases)]
-#[diesel(belongs_to(Game, foreign_key = game_id))]
-#[diesel(belongs_to(Order, foreign_key = order_id))]
-#[diesel(belongs_to(Currency, foreign_key = currency_id))]
+#[diesel(belongs_to(Game))]
+#[diesel(belongs_to(Order))]
+#[diesel(belongs_to(Currency))]
 #[diesel(check_for_backend(diesel::pg::Pg))]
 pub struct Purchase {
     pub id: i32,
@@ -43,13 +43,13 @@ pub struct Purchase {
     pub deprecated_date: Option<time::OffsetDateTime>,
     pub game_id: i32,
     pub order_id: i32,
-    pub amount: bigdecimal::BigDecimal,
     pub currency_id: i32,
+    pub amount: bigdecimal::BigDecimal,
 }
 
 #[derive(Queryable, Selectable, Identifiable, Associations)]
 #[diesel(table_name = orders)]
-#[diesel(belongs_to(Store, foreign_key = store_id))]
+#[diesel(belongs_to(Store))]
 #[diesel(check_for_backend(diesel::pg::Pg))]
 pub struct Order {
     pub id: i32,

@@ -6,7 +6,7 @@ create table orders
     purchase_date date not null,
     store_id int not null references stores(id),
 
-    check (created_date < orders.deprecated_date)
+    check (created_date < deprecated_date)
 );
 
 create table purchases
@@ -16,9 +16,9 @@ create table purchases
     deprecated_date timestamptz,
     game_id int not null references games(id),
     order_id int not null references orders(id),
-    amount decimal not null,
     currency_id int not null references currencies(id),
+    amount numeric not null,
 
-    check (created_date < purchases.deprecated_date),
+    check (created_date < deprecated_date),
     check (amount >= 0)
 );

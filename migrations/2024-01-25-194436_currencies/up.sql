@@ -5,5 +5,5 @@ create table currencies
     deprecated_date timestamptz,
     name char(3) not null,
 
-    check (created_date < currencies.deprecated_date)
+    check (created_date < deprecated_date)
 );
