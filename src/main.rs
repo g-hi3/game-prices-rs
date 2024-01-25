@@ -1,5 +1,6 @@
-use crate::models::Game;
+use crate::models::{Game, Store};
 use crate::schema::games::dsl::games;
+use crate::schema::stores::dsl::stores;
 use diesel::prelude::*;
 
 mod models;
@@ -7,12 +8,12 @@ mod schema;
 
 #[tokio::main]
 async fn main() {
+    dotenvy::dotenv().ok();
     let app = axum::Router::new()
         .route("/", axum::routing::get(|| async { "Hello World!" }))
         .route(
             "/games",
             axum::routing::get(|| async {
-                dotenvy::dotenv().ok();
                 let database_url = std::env::var("DATABASE_URL")
                     .expect("Environment variable DATABASE_URL must be set!");
                 let connection = &mut PgConnection::establish(&database_url)
@@ -25,6 +26,25 @@ async fn main() {
                 results
                     .iter()
                     .map(|game| format!("{}: {}", game.id, game.name).to_string())
+                    .collect::<Vec<String>>()
+                    .join("\n")
+            }),
+        )
+        .route(
+            "/stores",
+            axum::routing::get(|| async {
+                let database_url = std::env::var("DATABASE_URL")
+                    .expect("Environment variable DATABASE_URL must be set!");
+                let connection = &mut PgConnection::establish(&database_url)
+                    .unwrap_or_else(|_| panic!("Error connecting to {database_url}"));
+                let results = stores
+                    .select(Store::as_select())
+                    .load(connection)
+                    .expect("Error loading games");
+
+                results
+                    .iter()
+                    .map(|store| format!("{}: {}", store.id, store.name).to_string())
                     .collect::<Vec<String>>()
                     .join("\n")
             }),

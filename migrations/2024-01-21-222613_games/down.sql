@@ -1,1 +1,1 @@
-drop table games
+drop table games;
