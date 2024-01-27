@@ -55,4 +55,10 @@ diesel::joinable!(purchases -> currencies (currency_id));
 diesel::joinable!(purchases -> games (game_id));
 diesel::joinable!(purchases -> orders (order_id));
 
-diesel::allow_tables_to_appear_in_same_query!(currencies, games, orders, purchases, stores,);
+diesel::allow_tables_to_appear_in_same_query!(
+    currencies,
+    games,
+    orders,
+    purchases,
+    stores,
+);

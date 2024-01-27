@@ -2,6 +2,11 @@
 name = "game-prices-rs"
 version = "0.1.0"
 edition = "2021"
+default-run = "backend"
+
+[[bin]]
+name = "backend"
+path = "backend/src/main.rs"
 
 [dependencies]
 axum = "0.7.4"

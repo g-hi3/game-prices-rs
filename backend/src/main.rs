@@ -8,6 +8,9 @@ mod schema;
 
 #[tokio::main]
 async fn main() {
+    // TODO: So, the yew example shows two different binaries for frontend and backend.
+    // Maybe I should do this too.
+    // Solid.js looks like a good option.
     dotenvy::dotenv().ok();
     let app = axum::Router::new()
         .route("/", axum::routing::get(|| async { "Hello World!" }))
@@ -18,12 +21,10 @@ async fn main() {
                     .expect("Environment variable DATABASE_URL must be set!");
                 let connection = &mut PgConnection::establish(&database_url)
                     .unwrap_or_else(|_| panic!("Error connecting to {database_url}"));
-                let results = games
+                games
                     .select(Game::as_select())
                     .load(connection)
-                    .expect("Error loading games");
-
-                results
+                    .expect("Error loading games")
                     .iter()
                     .map(|game| format!("{}: {}", game.id, game.name).to_string())
                     .collect::<Vec<String>>()
@@ -37,12 +38,10 @@ async fn main() {
                     .expect("Environment variable DATABASE_URL must be set!");
                 let connection = &mut PgConnection::establish(&database_url)
                     .unwrap_or_else(|_| panic!("Error connecting to {database_url}"));
-                let results = stores
+                stores
                     .select(Store::as_select())
                     .load(connection)
-                    .expect("Error loading games");
-
-                results
+                    .expect("Error loading games")
                     .iter()
                     .map(|store| format!("{}: {}", store.id, store.name).to_string())
                     .collect::<Vec<String>>()

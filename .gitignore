@@ -1,4 +1,6 @@
-/.idea
-/target
+.idea/
+dist/
+node_modules/
+target/
 
 .env
