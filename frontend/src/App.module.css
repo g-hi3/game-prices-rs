@@ -1,5 +1,6 @@
 .App {
     font-size: calc(2vmin);
+    border: 1px solid blue;
 }
 
 .main {
@@ -12,10 +13,15 @@
     margin-left: 200px;
     padding: 1px 16px;
     height: 100%;
+    border: 1px solid green;
 }
 
 .header {
     background-color: #282c34;
+    display: flex;
+    flex-direction: row;
+    padding: 0 10px;
+    border: 1px solid yellow;
 }
 
 .nav {
@@ -26,6 +32,18 @@
     position: fixed;
     height: 100%;
     overflow: auto;
+    border: 1px solid orange;
+}
+
+header h1 {
+    flex-grow: 1;
+}
+
+header button {
+    align-self: center;
+    flex-grow: 0;
+    height: 40px;
+    width: 40px;
 }
 
 .footer {
@@ -34,4 +52,5 @@
     bottom: 0;
     min-width: 100vw;
     background-color: #101010;
+    border: 1px solid red;
 }
