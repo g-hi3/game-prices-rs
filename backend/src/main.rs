@@ -8,9 +8,6 @@ mod schema;
 
 #[tokio::main]
 async fn main() {
-    // TODO: So, the yew example shows two different binaries for frontend and backend.
-    // Maybe I should do this too.
-    // Solid.js looks like a good option.
     dotenvy::dotenv().ok();
     let app = axum::Router::new()
         .route("/", axum::routing::get(|| async { "Hello World!" }))
@@ -48,6 +45,6 @@ async fn main() {
                     .join("\n")
             }),
         );
-    let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:3000").await.unwrap();
     axum::serve(listener, app).await.unwrap();
 }
