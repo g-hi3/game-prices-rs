@@ -1,0 +1,21 @@
+PUT http://127.0.0.1:3000/game/create
+Content-Type: application/json
+
+{
+    "name": "Helldivers 2"
+}
+
+###
+
+GET http://127.0.0.1:3000/games
+
+> {%
+    client.test("Request executed successfully", function () {
+        client.assert(response.status === 200, "Response status is not 200");
+        client.assert(typeof response.body === "string", "Response is not a string");
+        const games = JSON.parse(response.body);
+        client.assert(Array.isArray(games), "Response JSON is not an array");
+        const newGame = games.find((game) => game.name === "Helldivers 2");
+        client.assert(newGame !== undefined, "New game was not returned");
+    });
+%}

@@ -1,6 +1,8 @@
 use crate::schema::*;
 use diesel::prelude::*;
+use serde::{Deserialize, Serialize};
 
+#[derive(Serialize)]
 #[derive(Queryable, Selectable, Identifiable)]
 #[diesel(table_name = games)]
 #[diesel(check_for_backend(diesel::pg::Pg))]
@@ -8,6 +10,13 @@ pub struct Game {
     pub id: i32,
     pub created_date: time::OffsetDateTime,
     pub deprecated_date: Option<time::OffsetDateTime>,
+    pub name: String,
+}
+
+#[derive(Deserialize)]
+#[derive(Insertable)]
+#[diesel(table_name = games)]
+pub struct NewGame {
     pub name: String,
 }
 

@@ -1,36 +1,22 @@
-use crate::models::{Game, Store};
-use crate::schema::games::dsl::games;
+use axum::routing::{get, put};
+use crate::models::Store;
 use crate::schema::stores::dsl::stores;
 use diesel::prelude::*;
 
 mod models;
 mod schema;
+mod services;
 
 #[tokio::main]
 async fn main() {
     dotenvy::dotenv().ok();
     let app = axum::Router::new()
-        .route("/", axum::routing::get(|| async { "Hello World!" }))
-        .route(
-            "/games",
-            axum::routing::get(|| async {
-                let database_url = std::env::var("DATABASE_URL")
-                    .expect("Environment variable DATABASE_URL must be set!");
-                let connection = &mut PgConnection::establish(&database_url)
-                    .unwrap_or_else(|_| panic!("Error connecting to {database_url}"));
-                games
-                    .select(Game::as_select())
-                    .load(connection)
-                    .expect("Error loading games")
-                    .iter()
-                    .map(|game| format!("{}: {}", game.id, game.name).to_string())
-                    .collect::<Vec<String>>()
-                    .join("\n")
-            }),
-        )
+        .route("/", get(|| async { "Hello World!" }))
+        .route("/games", get(services::get_games))
+        .route("/game/create", put(services::create_game))
         .route(
             "/stores",
-            axum::routing::get(|| async {
+            get(|| async {
                 let database_url = std::env::var("DATABASE_URL")
                     .expect("Environment variable DATABASE_URL must be set!");
                 let connection = &mut PgConnection::establish(&database_url)
