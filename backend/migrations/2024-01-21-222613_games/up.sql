@@ -23,5 +23,5 @@ create view active_games (id, name) as
 select id, name
 from games
 join game_history
-        on games.id = game_history.game_id
+    on id = game_id
 where deprecated_date is null;
