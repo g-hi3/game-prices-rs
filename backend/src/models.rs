@@ -8,14 +8,13 @@ use serde::{Deserialize, Serialize};
 #[diesel(check_for_backend(diesel::pg::Pg))]
 pub struct Game {
     pub id: i32,
-    pub created_date: time::OffsetDateTime,
-    pub deprecated_date: Option<time::OffsetDateTime>,
     pub name: String,
 }
 
 #[derive(Deserialize)]
 #[derive(Insertable)]
 #[diesel(table_name = games)]
+#[diesel(check_for_backend(diesel::pg::Pg))]
 pub struct NewGame {
     pub name: String,
 }

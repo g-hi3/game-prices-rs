@@ -11,10 +11,16 @@ diesel::table! {
 }
 
 diesel::table! {
-    games (id) {
-        id -> Int4,
+    game_history (game_id, created_date) {
+        game_id -> Int4,
         created_date -> Timestamptz,
         deprecated_date -> Nullable<Timestamptz>,
+    }
+}
+
+diesel::table! {
+    games (id) {
+        id -> Int4,
         name -> Varchar,
     }
 }
@@ -50,6 +56,7 @@ diesel::table! {
     }
 }
 
+diesel::joinable!(game_history -> games (game_id));
 diesel::joinable!(orders -> stores (store_id));
 diesel::joinable!(purchases -> currencies (currency_id));
 diesel::joinable!(purchases -> games (game_id));
@@ -57,6 +64,7 @@ diesel::joinable!(purchases -> orders (order_id));
 
 diesel::allow_tables_to_appear_in_same_query!(
     currencies,
+    game_history,
     games,
     orders,
     purchases,
