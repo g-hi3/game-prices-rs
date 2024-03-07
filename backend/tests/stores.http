@@ -1,0 +1,21 @@
+POST http://127.0.0.1:3000/store/create
+Content-Type: application/json
+
+{
+  "name": "Steam"
+}
+
+###
+
+GET http://127.0.0.1:3000/stores
+
+> {%
+    client.test("Request executed successfully", function () {
+        client.assert(response.status === 200, "Response status is not 200");
+        client.assert(typeof response.body === "string", "Response is not a string");
+        const stores = JSON.parse(response.body);
+        client.assert(Array.isArray(stores), "Response JSON is not an array");
+        const newStore = stores.find((store) => store.name === "Steam");
+        client.assert(newStore !== undefined, "New store was not returned");
+    });
+%}

@@ -1,4 +1,4 @@
-PUT http://127.0.0.1:3000/game/create
+POST http://127.0.0.1:3000/game/create
 Content-Type: application/json
 
 {

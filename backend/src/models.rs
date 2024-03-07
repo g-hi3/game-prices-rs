@@ -1,6 +1,9 @@
-use crate::schema::*;
+use diesel::associations::HasTable;
 use diesel::prelude::*;
 use serde::{Deserialize, Serialize};
+use time::OffsetDateTime;
+
+use crate::schema::*;
 
 #[derive(Serialize)]
 #[derive(Queryable, Selectable, Identifiable)]
@@ -19,14 +22,62 @@ pub struct NewGame {
     pub name: String,
 }
 
+#[derive(Serialize)]
+#[derive(Queryable)]
+#[diesel(table_name = game_versions)]
+#[diesel(check_for_backend(diesel::pg::Pg))]
+pub struct GameVersion {
+    pub game_id: i32,
+    pub history_id: i32,
+    pub created_date: OffsetDateTime,
+    pub deprecated_date: Option<OffsetDateTime>,
+}
+
+impl HasTable for GameVersion {
+    type Table = game_versions::table;
+
+    fn table() -> Self::Table {
+        game_versions::table
+    }
+}
+
+impl Identifiable for GameVersion {
+    type Id = (i32, i32);
+
+    fn id(self) -> Self::Id {
+        (self.game_id, self.history_id)
+    }
+}
+
+#[derive(Queryable)]
+#[diesel(table_name = game_histories)]
+#[diesel(check_for_backend(diesel::pg::Pg))]
+pub struct GameHistory {
+    pub id: i32,
+}
+
+#[derive(Serialize)]
 #[derive(Queryable, Selectable, Identifiable)]
 #[diesel(table_name = stores)]
 #[diesel(check_for_backend(diesel::pg::Pg))]
 pub struct Store {
     pub id: i32,
-    pub created_date: time::OffsetDateTime,
-    pub deprecated_date: Option<time::OffsetDateTime>,
     pub name: String,
+}
+
+#[derive(Deserialize)]
+#[derive(Insertable)]
+#[diesel(table_name = stores)]
+#[diesel(check_for_backend(diesel::pg::Pg))]
+pub struct NewStore {
+    pub name: String,
+}
+
+#[derive(Queryable)]
+#[diesel(table_name = store_histories)]
+#[diesel(check_for_backend(diesel::pg::Pg))]
+pub struct StoreHistory {
+    pub id: i32,
 }
 
 #[derive(Queryable, Selectable, Identifiable)]
@@ -34,9 +85,22 @@ pub struct Store {
 #[diesel(check_for_backend(diesel::pg::Pg))]
 pub struct Currency {
     pub id: i32,
-    pub created_date: time::OffsetDateTime,
-    pub deprecated_date: Option<time::OffsetDateTime>,
     pub name: String,
+}
+
+#[derive(Deserialize)]
+#[derive(Insertable)]
+#[diesel(table_name = currencies)]
+#[diesel(check_for_backend(diesel::pg::Pg))]
+pub struct NewCurrency {
+    pub name: String,
+}
+
+#[derive(Queryable)]
+#[diesel(table_name = currency_histories)]
+#[diesel(check_for_backend(diesel::pg::Pg))]
+pub struct CurrencyHistory {
+    pub id: i32,
 }
 
 #[derive(Queryable, Selectable, Identifiable, Associations)]
@@ -47,12 +111,28 @@ pub struct Currency {
 #[diesel(check_for_backend(diesel::pg::Pg))]
 pub struct Purchase {
     pub id: i32,
-    pub created_date: time::OffsetDateTime,
-    pub deprecated_date: Option<time::OffsetDateTime>,
     pub game_id: i32,
     pub order_id: i32,
     pub currency_id: i32,
     pub amount: bigdecimal::BigDecimal,
+}
+
+#[derive(Deserialize)]
+#[derive(Insertable)]
+#[diesel(table_name = purchases)]
+#[diesel(check_for_backend(diesel::pg::Pg))]
+pub struct NewPurchase {
+    pub game_id: i32,
+    pub order_id: i32,
+    pub currency_id: i32,
+    pub amount: bigdecimal::BigDecimal,
+}
+
+#[derive(Queryable)]
+#[diesel(table_name = purchase_histories)]
+#[diesel(check_for_backend(diesel::pg::Pg))]
+pub struct PurchaseHistory {
+    pub id: i32,
 }
 
 #[derive(Queryable, Selectable, Identifiable, Associations)]
@@ -61,8 +141,22 @@ pub struct Purchase {
 #[diesel(check_for_backend(diesel::pg::Pg))]
 pub struct Order {
     pub id: i32,
-    pub created_date: time::OffsetDateTime,
-    pub deprecated_date: Option<time::OffsetDateTime>,
-    pub purchase_date: time::Date,
+    pub order_date: time::Date,
     pub store_id: i32,
+}
+
+#[derive(Deserialize)]
+#[derive(Insertable)]
+#[diesel(table_name = orders)]
+#[diesel(check_for_backend(diesel::pg::Pg))]
+pub struct NewOrder {
+    pub order_date: time::Date,
+    pub store_id: i32,
+}
+
+#[derive(Queryable)]
+#[diesel(table_name = order_histories)]
+#[diesel(check_for_backend(diesel::pg::Pg))]
+pub struct OrderHistory {
+    pub id: i32,
 }
