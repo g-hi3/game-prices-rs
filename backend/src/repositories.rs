@@ -17,8 +17,8 @@ pub trait Repository: HasTable + HasVersionsTable {
     type HistoryEntity;
     type CreateChangeset;
 
-    fn get_all(connection: &mut PgConnection) -> QueryResult<Vec<Self::Entity>>;
-    fn create(changeset: Self::CreateChangeset, connection: &mut PgConnection) -> QueryResult<Self::Entity>;
+    fn get_all() -> QueryResult<Vec<Self::Entity>>;
+    fn create(changeset: Self::CreateChangeset) -> QueryResult<Self::Entity>;
 }
 
 impl HasVersionsTable for Game {
@@ -34,7 +34,8 @@ impl Repository for Game {
     type HistoryEntity = GameHistory;
     type CreateChangeset = NewGame;
 
-    fn get_all(connection: &mut PgConnection) -> QueryResult<Vec<Self::Entity>> {
+    fn get_all() -> QueryResult<Vec<Self::Entity>> {
+        let connection = &mut establish_db_connection();
         Self::table()
             .inner_join(Self::versions_table())
             .filter(game_versions::deprecated_date.is_null())
@@ -42,7 +43,8 @@ impl Repository for Game {
             .load(connection)
     }
 
-    fn create(changeset: Self::CreateChangeset, connection: &mut PgConnection) -> QueryResult<Self::Entity> {
+    fn create(changeset: Self::CreateChangeset) -> QueryResult<Self::Entity> {
+        let connection = &mut establish_db_connection();
         let game = connection.transaction(|conn| {
             let history = insert_into(histories::dsl::histories)
                 .default_values()
@@ -72,7 +74,8 @@ impl Repository for Store {
     type HistoryEntity = StoreHistory;
     type CreateChangeset = NewStore;
 
-    fn get_all(connection: &mut PgConnection) -> QueryResult<Vec<Self::Entity>> {
+    fn get_all() -> QueryResult<Vec<Self::Entity>> {
+        let connection = &mut establish_db_connection();
         Self::table()
             .inner_join(Self::versions_table())
             .filter(store_versions::deprecated_date.is_null())
@@ -80,7 +83,8 @@ impl Repository for Store {
             .load(connection)
     }
 
-    fn create(changeset: Self::CreateChangeset, connection: &mut PgConnection) -> QueryResult<Self::Entity> {
+    fn create(changeset: Self::CreateChangeset) -> QueryResult<Self::Entity> {
+        let connection = &mut establish_db_connection();
         let store = connection.transaction(|conn| {
             let history = insert_into(histories::dsl::histories)
                 .default_values()
@@ -110,7 +114,8 @@ impl Repository for Currency {
     type HistoryEntity = CurrencyHistory;
     type CreateChangeset = NewCurrency;
 
-    fn get_all(connection: &mut PgConnection) -> QueryResult<Vec<Self::Entity>> {
+    fn get_all() -> QueryResult<Vec<Self::Entity>> {
+        let connection = &mut establish_db_connection();
         Self::table()
             .inner_join(Self::versions_table())
             .filter(currency_versions::deprecated_date.is_null())
@@ -118,7 +123,8 @@ impl Repository for Currency {
             .load(connection)
     }
 
-    fn create(changeset: Self::CreateChangeset, connection: &mut PgConnection) -> QueryResult<Self::Entity> {
+    fn create(changeset: Self::CreateChangeset) -> QueryResult<Self::Entity> {
+        let connection = &mut establish_db_connection();
         let currency = connection.transaction(|conn| {
             let history = insert_into(histories::dsl::histories)
                 .default_values()
@@ -148,7 +154,8 @@ impl Repository for Order {
     type HistoryEntity = OrderHistory;
     type CreateChangeset = NewOrder;
 
-    fn get_all(connection: &mut PgConnection) -> QueryResult<Vec<Self::Entity>> {
+    fn get_all() -> QueryResult<Vec<Self::Entity>> {
+        let connection = &mut establish_db_connection();
         Self::table()
             .inner_join(Self::versions_table())
             .filter(order_versions::deprecated_date.is_null())
@@ -156,7 +163,8 @@ impl Repository for Order {
             .load(connection)
     }
 
-    fn create(changeset: Self::CreateChangeset, connection: &mut PgConnection) -> QueryResult<Self::Entity> {
+    fn create(changeset: Self::CreateChangeset) -> QueryResult<Self::Entity> {
+        let connection = &mut establish_db_connection();
         let order = connection.transaction(|conn| {
             let history = insert_into(histories::dsl::histories)
                 .default_values()
@@ -186,7 +194,8 @@ impl Repository for Purchase {
     type HistoryEntity = PurchaseHistory;
     type CreateChangeset = NewPurchase;
 
-    fn get_all(connection: &mut PgConnection) -> QueryResult<Vec<Self::Entity>> {
+    fn get_all() -> QueryResult<Vec<Self::Entity>> {
+        let connection = &mut establish_db_connection();
         Self::table()
             .inner_join(Self::versions_table())
             .filter(purchase_versions::deprecated_date.is_null())
@@ -194,7 +203,8 @@ impl Repository for Purchase {
             .load(connection)
     }
 
-    fn create(changeset: Self::CreateChangeset, connection: &mut PgConnection) -> QueryResult<Self::Entity> {
+    fn create(changeset: Self::CreateChangeset) -> QueryResult<Self::Entity> {
+        let connection = &mut establish_db_connection();
         let purchase = connection.transaction(|conn| {
             let history = insert_into(histories::dsl::histories)
                 .default_values()
@@ -209,4 +219,11 @@ impl Repository for Purchase {
         })?;
         Ok(purchase)
     }
+}
+
+fn establish_db_connection() -> PgConnection {
+    let database_url = std::env::var("DATABASE_URL")
+        .expect("Environment variable DATABASE_URL must be set!");
+    PgConnection::establish(&database_url)
+        .unwrap_or_else(|_| panic!("Error connecting to {database_url}"))
 }

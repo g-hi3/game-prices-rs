@@ -9,7 +9,6 @@ mod repositories;
 async fn main() {
     dotenvy::dotenv().ok();
     let app = axum::Router::new()
-        .route("/", get(|| async { "Hello World!" }))
         .route("/games", get(services::get_games))
         .route("/game/create", post(services::create_game))
         .route("/stores", get(services::get_stores))

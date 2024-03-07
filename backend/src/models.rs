@@ -1,4 +1,3 @@
-use diesel::associations::HasTable;
 use diesel::prelude::*;
 use serde::{Deserialize, Serialize};
 use time::OffsetDateTime;
@@ -31,22 +30,6 @@ pub struct GameVersion {
     pub history_id: i32,
     pub created_date: OffsetDateTime,
     pub deprecated_date: Option<OffsetDateTime>,
-}
-
-impl HasTable for GameVersion {
-    type Table = game_versions::table;
-
-    fn table() -> Self::Table {
-        game_versions::table
-    }
-}
-
-impl Identifiable for GameVersion {
-    type Id = (i32, i32);
-
-    fn id(self) -> Self::Id {
-        (self.game_id, self.history_id)
-    }
 }
 
 #[derive(Queryable)]
