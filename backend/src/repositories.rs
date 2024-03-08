@@ -53,25 +53,31 @@ impl Game {
     pub fn update(changeset: Self) -> QueryResult<Self> {
         let connection = &mut establish_db_connection();
         let game = connection.transaction(|conn| {
-            let now = OffsetDateTime::now_utc();
             let next_game = NewGame {
                 name: changeset.name
             };
             let next_game = Self::create_no_transaction(next_game, conn)?;
-            let mut prev_version = Self::versions_table()
-                .filter(game_versions::game_id.eq(changeset.id))
-                .filter(game_versions::deprecated_date.is_null())
-                .get_result::<GameVersion>(conn)?;
+            let mut prev_version = GameVersion::get_by_id(changeset.id, conn)?;
             let next_version = NewGameVersion {
                 game_id: next_game.id,
                 history_id: prev_version.history_id,
             };
-            prev_version.deprecated_date = Some(now);
+            prev_version.deprecated_date = Some(OffsetDateTime::now_utc());
             _ = GameVersion::update_no_transaction(prev_version, conn)?;
             _ = GameVersion::create_no_transaction(next_version, conn)?;
             Result::<Self, diesel::result::Error>::Ok(next_game)
         })?;
         Ok(game)
+    }
+
+    pub fn delete(id: i32) -> QueryResult<()> {
+        let connection = &mut establish_db_connection();
+        connection.transaction(|conn| {
+            let mut current_version = GameVersion::get_by_id(id, conn)?;
+            current_version.deprecated_date = Some(OffsetDateTime::now_utc());
+            _ = GameVersion::update_no_transaction(current_version, conn)?;
+            Ok(())
+        })
     }
 
     fn create_no_transaction(changeset: NewGame, connection: &mut PgConnection) -> QueryResult<Self> {
@@ -90,6 +96,13 @@ impl HasTable for GameVersion {
 }
 
 impl GameVersion {
+    fn get_by_id(id: i32, connection: &mut PgConnection) -> QueryResult<Self> {
+        Self::table()
+            .filter(game_versions::game_id.eq(id))
+            .filter(game_versions::deprecated_date.is_null())
+            .get_result::<GameVersion>(connection)
+    }
+
     fn create_no_transaction(changeset: NewGameVersion, connection: &mut PgConnection) -> QueryResult<Self> {
         diesel::insert_into(Self::table())
             .values(changeset)
@@ -98,6 +111,7 @@ impl GameVersion {
 
     fn update_no_transaction(changeset: Self, connection: &mut PgConnection) -> QueryResult<Self> {
         diesel::update(Self::table())
+            .filter(game_versions::game_id.eq(changeset.game_id))
             .set(changeset)
             .get_result::<Self>(connection)
     }

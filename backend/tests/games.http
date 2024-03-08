@@ -5,12 +5,18 @@ Content-Type: application/json
     "name": "Helldviers 2"
 }
 
+> {%
+    client.test("Game successfully created", function() {
+        client.assert(response.status === 200, "Response status is not 200");
+    });
+%}
+
 ###
 
 GET http://127.0.0.1:3000/games
 
 > {%
-    client.test("Request executed successfully", function () {
+    client.test("Newly created game found successfully", function() {
         client.assert(response.status === 200, "Response status is not 200");
         client.assert(typeof response.body === "string", "Response is not a string");
         const games = JSON.parse(response.body);
@@ -31,12 +37,18 @@ Content-Type: application/json
   "name": "Helldivers 2"
 }
 
+> {%
+    client.test("Game successfully updated", function() {
+        client.assert(response.status === 200, "Response status is not 200");
+    });
+ %}
+
 ###
 
 GET http://127.0.0.1:3000/games
 
 > {%
-    client.test("Request executed successfully", function () {
+    client.test("Updated game found successfully", function() {
         client.assert(response.status === 200, "Response status is not 200");
         client.assert(typeof response.body === "string", "Response is not a string");
         const games = JSON.parse(response.body);
@@ -46,5 +58,29 @@ GET http://127.0.0.1:3000/games
         client.assert(newGame.id === 2, "New game doesn't have the id 2");
         const oldGame = games.find((game) => game.id === 1);
         client.assert(oldGame === undefined, "Old game is still returned")
+    });
+%}
+
+###
+
+DELETE http://127.0.0.1:3000/game/2/delete
+
+> {%
+    client.test("Game successfully deleted", function() {
+        client.assert(response.status === 200, "Response status is not 200");
+    });
+%}
+
+###
+
+GET http://127.0.0.1:3000/games
+
+> {%
+    client.test("Deleted game not found successfully", function() {
+        client.assert(response.status === 200, "Response status is not 200");
+        client.assert(typeof response.body === "string", "Response is not a string");
+        const games = JSON.parse(response.body);
+        client.assert(Array.isArray(games), "Response JSON is not an array");
+        client.assert(games.length === 0, "Games array is not empty")
     });
 %}

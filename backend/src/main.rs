@@ -1,4 +1,4 @@
-use axum::routing::{get, post};
+use axum::routing::{delete, get, post};
 
 mod models;
 mod schema;
@@ -12,6 +12,7 @@ async fn main() {
         .route("/games", get(services::get_games))
         .route("/game/create", post(services::create_game))
         .route("/game/update", post(services::update_game))
+        .route("/game/:id/delete", delete(services::delete_game))
         .route("/stores", get(services::get_stores))
         .route("/store/create", post(services::create_store))
         .fallback(services::handle_invalid_request);

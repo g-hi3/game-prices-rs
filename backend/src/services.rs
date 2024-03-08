@@ -1,3 +1,4 @@
+use axum::extract::Path;
 use axum::http::StatusCode;
 use axum::Json;
 use axum::response::IntoResponse;
@@ -36,6 +37,13 @@ pub async fn update_game(Json(game): Json<Game>) -> impl IntoResponse {
                 Err(error) => (StatusCode::INTERNAL_SERVER_ERROR, error.to_string())
             }
         }
+        Err(error) => (StatusCode::INTERNAL_SERVER_ERROR, error.to_string())
+    }
+}
+
+pub async fn delete_game(Path(id): Path<i32>) -> impl IntoResponse {
+    match Game::delete(id) {
+        Ok(_) => (StatusCode::OK, String::new()),
         Err(error) => (StatusCode::INTERNAL_SERVER_ERROR, error.to_string())
     }
 }
