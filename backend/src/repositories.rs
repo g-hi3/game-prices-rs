@@ -1,24 +1,20 @@
-use diesel::{Connection, ExpressionMethods, insert_into, PgConnection, QueryDsl, QueryResult, RunQueryDsl, Selectable, SelectableHelper};
+use diesel::{Connection, ExpressionMethods, PgConnection, QueryDsl, QueryResult, RunQueryDsl, SelectableHelper};
 use diesel::associations::HasTable;
-use diesel::pg::Pg;
+use time::OffsetDateTime;
 
-use crate::models::{Currency, CurrencyHistory, Game, GameHistory, NewCurrency, NewGame, NewOrder, NewPurchase, NewStore, Order, OrderHistory, Purchase, PurchaseHistory, Store, StoreHistory};
+use crate::models::{Currency, Game, GameVersion, History, NewCurrency, NewGame, NewGameVersion, NewOrder, NewPurchase, NewStore, Order, Purchase, Store};
 use crate::schema::{currency_versions, game_versions, histories, order_versions, purchase_versions, store_versions};
+
+fn create_history_no_transaction(connection: &mut PgConnection) -> QueryResult<History> {
+    diesel::insert_into(histories::dsl::histories)
+        .default_values()
+        .get_result::<History>(connection)
+}
 
 pub trait HasVersionsTable {
     type VersionsTable: HasTable;
 
     fn versions_table() -> Self::VersionsTable;
-}
-
-// TODO: `Repository` could easily be implemented using a `derive` macro.
-pub trait Repository: HasTable + HasVersionsTable {
-    type Entity: Selectable<Pg>;
-    type HistoryEntity;
-    type CreateChangeset;
-
-    fn get_all() -> QueryResult<Vec<Self::Entity>>;
-    fn create(changeset: Self::CreateChangeset) -> QueryResult<Self::Entity>;
 }
 
 impl HasVersionsTable for Game {
@@ -29,12 +25,8 @@ impl HasVersionsTable for Game {
     }
 }
 
-impl Repository for Game {
-    type Entity = Game;
-    type HistoryEntity = GameHistory;
-    type CreateChangeset = NewGame;
-
-    fn get_all() -> QueryResult<Vec<Self::Entity>> {
+impl Game {
+    pub fn get_all() -> QueryResult<Vec<Self>> {
         let connection = &mut establish_db_connection();
         Self::table()
             .inner_join(Self::versions_table())
@@ -43,21 +35,71 @@ impl Repository for Game {
             .load(connection)
     }
 
-    fn create(changeset: Self::CreateChangeset) -> QueryResult<Self::Entity> {
+    pub fn create(changeset: NewGame) -> QueryResult<Self> {
         let connection = &mut establish_db_connection();
         let game = connection.transaction(|conn| {
-            let history = insert_into(histories::dsl::histories)
-                .default_values()
-                .get_result::<Self::HistoryEntity>(conn)?;
-            let game = insert_into(Self::table())
-                .values(changeset)
-                .get_result::<Self>(conn)?;
-            _ = insert_into(Self::versions_table())
-                .values((game_versions::game_id.eq(game.id), game_versions::history_id.eq(history.id)))
-                .execute(conn)?;
+            let history = create_history_no_transaction(conn)?;
+            let game = Self::create_no_transaction(changeset, conn)?;
+            let game_version = NewGameVersion {
+                game_id: game.id,
+                history_id: history.id,
+            };
+            _ = GameVersion::create_no_transaction(game_version, conn)?;
             Result::<Self, diesel::result::Error>::Ok(game)
         })?;
         Ok(game)
+    }
+
+    pub fn update(changeset: Self) -> QueryResult<Self> {
+        let connection = &mut establish_db_connection();
+        let game = connection.transaction(|conn| {
+            let now = OffsetDateTime::now_utc();
+            let next_game = NewGame {
+                name: changeset.name
+            };
+            let next_game = Self::create_no_transaction(next_game, conn)?;
+            let mut prev_version = Self::versions_table()
+                .filter(game_versions::game_id.eq(changeset.id))
+                .filter(game_versions::deprecated_date.is_null())
+                .get_result::<GameVersion>(conn)?;
+            let next_version = NewGameVersion {
+                game_id: next_game.id,
+                history_id: prev_version.history_id,
+            };
+            prev_version.deprecated_date = Some(now);
+            _ = GameVersion::update_no_transaction(prev_version, conn)?;
+            _ = GameVersion::create_no_transaction(next_version, conn)?;
+            Result::<Self, diesel::result::Error>::Ok(next_game)
+        })?;
+        Ok(game)
+    }
+
+    fn create_no_transaction(changeset: NewGame, connection: &mut PgConnection) -> QueryResult<Self> {
+        diesel::insert_into(Self::table())
+            .values(changeset)
+            .get_result::<Self>(connection)
+    }
+}
+
+impl HasTable for GameVersion {
+    type Table = game_versions::table;
+
+    fn table() -> Self::Table {
+        game_versions::table
+    }
+}
+
+impl GameVersion {
+    fn create_no_transaction(changeset: NewGameVersion, connection: &mut PgConnection) -> QueryResult<Self> {
+        diesel::insert_into(Self::table())
+            .values(changeset)
+            .get_result::<Self>(connection)
+    }
+
+    fn update_no_transaction(changeset: Self, connection: &mut PgConnection) -> QueryResult<Self> {
+        diesel::update(Self::table())
+            .set(changeset)
+            .get_result::<Self>(connection)
     }
 }
 
@@ -69,12 +111,8 @@ impl HasVersionsTable for Store {
     }
 }
 
-impl Repository for Store {
-    type Entity = Store;
-    type HistoryEntity = StoreHistory;
-    type CreateChangeset = NewStore;
-
-    fn get_all() -> QueryResult<Vec<Self::Entity>> {
+impl Store {
+    pub fn get_all() -> QueryResult<Vec<Self>> {
         let connection = &mut establish_db_connection();
         Self::table()
             .inner_join(Self::versions_table())
@@ -83,16 +121,16 @@ impl Repository for Store {
             .load(connection)
     }
 
-    fn create(changeset: Self::CreateChangeset) -> QueryResult<Self::Entity> {
+    pub fn create(changeset: NewStore) -> QueryResult<Self> {
         let connection = &mut establish_db_connection();
         let store = connection.transaction(|conn| {
-            let history = insert_into(histories::dsl::histories)
+            let history = diesel::insert_into(histories::dsl::histories)
                 .default_values()
-                .get_result::<Self::HistoryEntity>(conn)?;
-            let store = insert_into(Self::table())
+                .get_result::<History>(conn)?;
+            let store = diesel::insert_into(Self::table())
                 .values(changeset)
                 .get_result::<Self>(conn)?;
-            _ = insert_into(Self::versions_table())
+            _ = diesel::insert_into(Self::versions_table())
                 .values((store_versions::store_id.eq(store.id), store_versions::history_id.eq(history.id)))
                 .execute(conn)?;
             Result::<Self, diesel::result::Error>::Ok(store)
@@ -109,12 +147,8 @@ impl HasVersionsTable for Currency {
     }
 }
 
-impl Repository for Currency {
-    type Entity = Currency;
-    type HistoryEntity = CurrencyHistory;
-    type CreateChangeset = NewCurrency;
-
-    fn get_all() -> QueryResult<Vec<Self::Entity>> {
+impl Currency {
+    pub fn get_all() -> QueryResult<Vec<Self>> {
         let connection = &mut establish_db_connection();
         Self::table()
             .inner_join(Self::versions_table())
@@ -123,16 +157,16 @@ impl Repository for Currency {
             .load(connection)
     }
 
-    fn create(changeset: Self::CreateChangeset) -> QueryResult<Self::Entity> {
+    pub fn create(changeset: NewCurrency) -> QueryResult<Self> {
         let connection = &mut establish_db_connection();
         let currency = connection.transaction(|conn| {
-            let history = insert_into(histories::dsl::histories)
+            let history = diesel::insert_into(histories::dsl::histories)
                 .default_values()
-                .get_result::<Self::HistoryEntity>(conn)?;
-            let currency = insert_into(Self::table())
+                .get_result::<History>(conn)?;
+            let currency = diesel::insert_into(Self::table())
                 .values(changeset)
                 .get_result::<Self>(conn)?;
-            _ = insert_into(Self::versions_table())
+            _ = diesel::insert_into(Self::versions_table())
                 .values((currency_versions::currency_id.eq(currency.id), currency_versions::history_id.eq(history.id)))
                 .execute(conn)?;
             Result::<Self, diesel::result::Error>::Ok(currency)
@@ -149,12 +183,8 @@ impl HasVersionsTable for Order {
     }
 }
 
-impl Repository for Order {
-    type Entity = Order;
-    type HistoryEntity = OrderHistory;
-    type CreateChangeset = NewOrder;
-
-    fn get_all() -> QueryResult<Vec<Self::Entity>> {
+impl Order {
+    pub fn get_all() -> QueryResult<Vec<Self>> {
         let connection = &mut establish_db_connection();
         Self::table()
             .inner_join(Self::versions_table())
@@ -163,16 +193,16 @@ impl Repository for Order {
             .load(connection)
     }
 
-    fn create(changeset: Self::CreateChangeset) -> QueryResult<Self::Entity> {
+    fn create(changeset: NewOrder) -> QueryResult<Self> {
         let connection = &mut establish_db_connection();
         let order = connection.transaction(|conn| {
-            let history = insert_into(histories::dsl::histories)
+            let history = diesel::insert_into(histories::dsl::histories)
                 .default_values()
-                .get_result::<Self::HistoryEntity>(conn)?;
-            let order = insert_into(Self::table())
+                .get_result::<History>(conn)?;
+            let order = diesel::insert_into(Self::table())
                 .values(changeset)
                 .get_result::<Self>(conn)?;
-            _ = insert_into(Self::versions_table())
+            _ = diesel::insert_into(Self::versions_table())
                 .values((order_versions::order_id.eq(order.id), order_versions::history_id.eq(history.id)))
                 .execute(conn)?;
             Result::<Self, diesel::result::Error>::Ok(order)
@@ -189,12 +219,8 @@ impl HasVersionsTable for Purchase {
     }
 }
 
-impl Repository for Purchase {
-    type Entity = Purchase;
-    type HistoryEntity = PurchaseHistory;
-    type CreateChangeset = NewPurchase;
-
-    fn get_all() -> QueryResult<Vec<Self::Entity>> {
+impl Purchase {
+    fn get_all() -> QueryResult<Vec<Self>> {
         let connection = &mut establish_db_connection();
         Self::table()
             .inner_join(Self::versions_table())
@@ -203,16 +229,16 @@ impl Repository for Purchase {
             .load(connection)
     }
 
-    fn create(changeset: Self::CreateChangeset) -> QueryResult<Self::Entity> {
+    fn create(changeset: NewPurchase) -> QueryResult<Self> {
         let connection = &mut establish_db_connection();
         let purchase = connection.transaction(|conn| {
-            let history = insert_into(histories::dsl::histories)
+            let history = diesel::insert_into(histories::dsl::histories)
                 .default_values()
-                .get_result::<Self::HistoryEntity>(conn)?;
-            let purchase = insert_into(Self::table())
+                .get_result::<History>(conn)?;
+            let purchase = diesel::insert_into(Self::table())
                 .values(changeset)
                 .get_result::<Self>(conn)?;
-            _ = insert_into(Self::versions_table())
+            _ = diesel::insert_into(Self::versions_table())
                 .values((purchase_versions::purchase_id.eq(purchase.id), purchase_versions::history_id.eq(history.id)))
                 .execute(conn)?;
             Result::<Self, diesel::result::Error>::Ok(purchase)

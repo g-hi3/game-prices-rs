@@ -4,7 +4,14 @@ use time::OffsetDateTime;
 
 use crate::schema::*;
 
-#[derive(Serialize)]
+#[derive(Queryable)]
+#[diesel(table_name = histories)]
+#[diesel(check_for_backend(diesel::pg::Pg))]
+pub struct History {
+    pub id: i32,
+}
+
+#[derive(Serialize, Deserialize)]
 #[derive(Queryable, Selectable, Identifiable)]
 #[diesel(table_name = games)]
 #[diesel(check_for_backend(diesel::pg::Pg))]
@@ -21,8 +28,7 @@ pub struct NewGame {
     pub name: String,
 }
 
-#[derive(Serialize)]
-#[derive(Queryable)]
+#[derive(Queryable, AsChangeset)]
 #[diesel(table_name = game_versions)]
 #[diesel(check_for_backend(diesel::pg::Pg))]
 pub struct GameVersion {
@@ -32,11 +38,12 @@ pub struct GameVersion {
     pub deprecated_date: Option<OffsetDateTime>,
 }
 
-#[derive(Queryable)]
-#[diesel(table_name = game_histories)]
+#[derive(Insertable)]
+#[diesel(table_name = game_versions)]
 #[diesel(check_for_backend(diesel::pg::Pg))]
-pub struct GameHistory {
-    pub id: i32,
+pub(crate) struct NewGameVersion {
+    pub game_id: i32,
+    pub history_id: i32,
 }
 
 #[derive(Serialize)]
@@ -56,13 +63,6 @@ pub struct NewStore {
     pub name: String,
 }
 
-#[derive(Queryable)]
-#[diesel(table_name = store_histories)]
-#[diesel(check_for_backend(diesel::pg::Pg))]
-pub struct StoreHistory {
-    pub id: i32,
-}
-
 #[derive(Queryable, Selectable, Identifiable)]
 #[diesel(table_name = currencies)]
 #[diesel(check_for_backend(diesel::pg::Pg))]
@@ -77,13 +77,6 @@ pub struct Currency {
 #[diesel(check_for_backend(diesel::pg::Pg))]
 pub struct NewCurrency {
     pub name: String,
-}
-
-#[derive(Queryable)]
-#[diesel(table_name = currency_histories)]
-#[diesel(check_for_backend(diesel::pg::Pg))]
-pub struct CurrencyHistory {
-    pub id: i32,
 }
 
 #[derive(Queryable, Selectable, Identifiable, Associations)]
@@ -111,13 +104,6 @@ pub struct NewPurchase {
     pub amount: bigdecimal::BigDecimal,
 }
 
-#[derive(Queryable)]
-#[diesel(table_name = purchase_histories)]
-#[diesel(check_for_backend(diesel::pg::Pg))]
-pub struct PurchaseHistory {
-    pub id: i32,
-}
-
 #[derive(Queryable, Selectable, Identifiable, Associations)]
 #[diesel(table_name = orders)]
 #[diesel(belongs_to(Store))]
@@ -135,11 +121,4 @@ pub struct Order {
 pub struct NewOrder {
     pub order_date: time::Date,
     pub store_id: i32,
-}
-
-#[derive(Queryable)]
-#[diesel(table_name = order_histories)]
-#[diesel(check_for_backend(diesel::pg::Pg))]
-pub struct OrderHistory {
-    pub id: i32,
 }

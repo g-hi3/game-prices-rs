@@ -11,6 +11,7 @@ async fn main() {
     let app = axum::Router::new()
         .route("/games", get(services::get_games))
         .route("/game/create", post(services::create_game))
+        .route("/game/update", post(services::update_game))
         .route("/stores", get(services::get_stores))
         .route("/store/create", post(services::create_store))
         .fallback(services::handle_invalid_request);

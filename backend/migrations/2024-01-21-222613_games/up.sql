@@ -15,14 +15,14 @@ create table game_versions
 (
     game_id int not null,
     history_id int not null,
-    created_date timestamptz not null default current_timestamp,
+    created_date timestamptz not null default clock_timestamp(),
     deprecated_date timestamptz,
 
     primary key (game_id, history_id),
     foreign key (game_id) references games (id),
     foreign key (history_id) references histories (id),
-    check (created_date <= current_timestamp),
-    check (deprecated_date <= current_timestamp),
+    check (created_date <= clock_timestamp()),
+    check (deprecated_date <= clock_timestamp()),
     check (created_date < deprecated_date),
     exclude using gist (
         history_id with =,
