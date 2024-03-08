@@ -1,5 +1,9 @@
 # Game Prices
 
+## Table of Contents
+
+[Requirements](#requirements)<br/>
+
 ## Requirements
 
 Run the `build/install-diesel-cli.ps1` script to install the Diesel CLI.
