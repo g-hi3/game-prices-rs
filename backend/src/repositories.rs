@@ -2,7 +2,7 @@ use diesel::{Connection, ExpressionMethods, PgConnection, QueryDsl, QueryResult,
 use diesel::associations::HasTable;
 use time::OffsetDateTime;
 
-use crate::models::{Currency, Game, GameVersion, History, NewCurrency, NewGame, NewGameVersion, NewOrder, NewPurchase, NewStore, Order, Purchase, Store};
+use crate::models::{Currency, Game, GameVersion, History, NewCurrency, NewGame, NewGameVersion, NewOrder, NewPurchase, NewStore, NewStoreVersion, Order, Purchase, Store, StoreVersion};
 use crate::schema::{currency_versions, game_versions, histories, order_versions, purchase_versions, store_versions};
 
 fn create_history_no_transaction(connection: &mut PgConnection) -> QueryResult<History> {
@@ -100,7 +100,7 @@ impl GameVersion {
         Self::table()
             .filter(game_versions::game_id.eq(id))
             .filter(game_versions::deprecated_date.is_null())
-            .get_result::<GameVersion>(connection)
+            .get_result::<Self>(connection)
     }
 
     fn create_no_transaction(changeset: NewGameVersion, connection: &mut PgConnection) -> QueryResult<Self> {
@@ -138,18 +138,82 @@ impl Store {
     pub fn create(changeset: NewStore) -> QueryResult<Self> {
         let connection = &mut establish_db_connection();
         let store = connection.transaction(|conn| {
-            let history = diesel::insert_into(histories::dsl::histories)
-                .default_values()
-                .get_result::<History>(conn)?;
-            let store = diesel::insert_into(Self::table())
-                .values(changeset)
-                .get_result::<Self>(conn)?;
-            _ = diesel::insert_into(Self::versions_table())
-                .values((store_versions::store_id.eq(store.id), store_versions::history_id.eq(history.id)))
-                .execute(conn)?;
+            let history = create_history_no_transaction(conn)?;
+            let store = Self::create_no_transaction(changeset, conn)?;
+            let store_version = NewStoreVersion {
+                store_id: store.id,
+                history_id: history.id,
+            };
+            _ = StoreVersion::create_no_transaction(store_version, conn)?;
             Result::<Self, diesel::result::Error>::Ok(store)
         })?;
         Ok(store)
+    }
+
+    pub fn update(changeset: Self) -> QueryResult<Self> {
+        let connection = &mut establish_db_connection();
+        let store = connection.transaction(|conn| {
+            let next_store = NewStore {
+                name: changeset.name
+            };
+            let next_store = Self::create_no_transaction(next_store, conn)?;
+            let mut prev_version = StoreVersion::get_by_id(changeset.id, conn)?;
+            let next_version = NewStoreVersion {
+                store_id: next_store.id,
+                history_id: prev_version.history_id,
+            };
+            prev_version.deprecated_date = Some(OffsetDateTime::now_utc());
+            _ = StoreVersion::update_no_transaction(prev_version, conn)?;
+            _ = StoreVersion::create_no_transaction(next_version, conn)?;
+            Result::<Self, diesel::result::Error>::Ok(next_store)
+        })?;
+        Ok(store)
+    }
+
+    pub fn delete(id: i32) -> QueryResult<()> {
+        let connection = &mut establish_db_connection();
+        connection.transaction(|conn| {
+            let mut current_version = StoreVersion::get_by_id(id, conn)?;
+            current_version.deprecated_date = Some(OffsetDateTime::now_utc());
+            _ = StoreVersion::update_no_transaction(current_version, conn)?;
+            Ok(())
+        })
+    }
+
+    fn create_no_transaction(changeset: NewStore, connection: &mut PgConnection) -> QueryResult<Self> {
+        diesel::insert_into(Self::table())
+            .values(changeset)
+            .get_result::<Self>(connection)
+    }
+}
+
+impl HasTable for StoreVersion {
+    type Table = store_versions::table;
+
+    fn table() -> Self::Table {
+        store_versions::table
+    }
+}
+
+impl StoreVersion {
+    fn get_by_id(id: i32, connection: &mut PgConnection) -> QueryResult<Self> {
+        Self::table()
+            .filter(store_versions::store_id.eq(id))
+            .filter(store_versions::deprecated_date.is_null())
+            .get_result::<Self>(connection)
+    }
+
+    fn create_no_transaction(changeset: NewStoreVersion, connection: &mut PgConnection) -> QueryResult<Self> {
+        diesel::insert_into(Self::table())
+            .values(changeset)
+            .get_result::<Self>(connection)
+    }
+
+    fn update_no_transaction(changeset: Self, connection: &mut PgConnection) -> QueryResult<Self> {
+        diesel::update(Self::table())
+            .filter(store_versions::store_id.eq(changeset.store_id))
+            .set(changeset)
+            .get_result::<Self>(connection)
     }
 }
 

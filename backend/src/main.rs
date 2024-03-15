@@ -19,6 +19,8 @@ async fn main() {
         .route("/game/:id/delete", delete(services::delete_game))
         .route("/stores", get(services::get_stores))
         .route("/store/create", post(services::create_store))
+        .route("/store/update", post(services::update_store))
+        .route("/store/:id/delete", delete(services::delete_store))
         .fallback(services::handle_invalid_request)
         .layer(cors);
     let listener = tokio::net::TcpListener::bind("127.0.0.1:3000").await.unwrap();

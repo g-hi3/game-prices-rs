@@ -2,20 +2,85 @@ POST http://127.0.0.1:3000/store/create
 Content-Type: application/json
 
 {
-  "name": "Steam"
+  "name": "Vapor"
 }
+
+> {%
+    client.test("Store successfully created", function() {
+        client.assert(response.status === 200, "Response status is not 200");
+    });
+%}
 
 ###
 
 GET http://127.0.0.1:3000/stores
 
 > {%
-    client.test("Request executed successfully", function () {
+    client.test("Newly created store found successfully", function() {
+        client.assert(response.status === 200, "Response status is not 200");
+        client.assert(typeof response.body === "string", "Response is not a string");
+        const stores = JSON.parse(response.body);
+        client.assert(Array.isArray(stores), "Response JSON is not an array");
+        const newStore = stores.find((store) => store.name === "Vapor");
+        client.assert(newStore !== undefined, "New store was not returned");
+        client.assert(newStore.id === 1, "New store doesn't have the id 1");
+    });
+%}
+
+###
+
+POST http://127.0.0.1:3000/store/update
+Content-Type: application/json
+
+{
+  "id": 1,
+  "name": "Steam"
+}
+
+> {%
+    client.test("Store successfully updated", function() {
+        client.assert(response.status === 200, "Response status is not 200");
+    });
+%}
+
+###
+
+GET http://127.0.0.1:3000/stores
+
+> {%
+    client.test("Updated store found successfully", function() {
         client.assert(response.status === 200, "Response status is not 200");
         client.assert(typeof response.body === "string", "Response is not a string");
         const stores = JSON.parse(response.body);
         client.assert(Array.isArray(stores), "Response JSON is not an array");
         const newStore = stores.find((store) => store.name === "Steam");
         client.assert(newStore !== undefined, "New store was not returned");
+        client.assert(newStore.id === 2, "New store doesn't have the id 2");
+        const oldStore = stores.find((store) => store.id === 1);
+        client.assert(oldStore === undefined, "Old store is still returned")
+    });
+%}
+
+###
+
+DELETE http://127.0.0.1:3000/store/2/delete
+
+> {%
+    client.test("Store successfully deleted", function() {
+        client.assert(response.status === 204, "Response status is not 200");
+    });
+%}
+
+###
+
+GET http://127.0.0.1:3000/stores
+
+> {%
+    client.test("Deleted store not found successfully", function() {
+        client.assert(response.status === 200, "Response status is not 200");
+        client.assert(typeof response.body === "string", "Response is not a string");
+        const stores = JSON.parse(response.body);
+        client.assert(Array.isArray(stores), "Response JSON is not an array");
+        client.assert(stores.length === 0, "Stores array is not empty")
     });
 %}

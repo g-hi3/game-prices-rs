@@ -5,8 +5,14 @@ const fetchGames = async () => {
     return games.json();
 };
 
+const fetchStores = async () => {
+    const stores = await fetch("http://127.0.0.1:3000/stores");
+    return stores.json();
+}
+
 const GameList = () => {
     const [games] = createResource(fetchGames);
+    const [stores] = createResource(fetchStores);
 
     return (
         <>

@@ -46,7 +46,7 @@ pub(crate) struct NewGameVersion {
     pub history_id: i32,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Deserialize)]
 #[derive(Queryable, Selectable, Identifiable)]
 #[diesel(table_name = stores)]
 #[diesel(check_for_backend(diesel::pg::Pg))]
@@ -61,6 +61,24 @@ pub struct Store {
 #[diesel(check_for_backend(diesel::pg::Pg))]
 pub struct NewStore {
     pub name: String,
+}
+
+#[derive(Queryable, AsChangeset)]
+#[diesel(table_name = store_versions)]
+#[diesel(check_for_backend(diesel::pg::Pg))]
+pub struct StoreVersion {
+    pub store_id: i32,
+    pub history_id: i32,
+    pub created_date: OffsetDateTime,
+    pub deprecated_date: Option<OffsetDateTime>,
+}
+
+#[derive(Insertable)]
+#[diesel(table_name = store_versions)]
+#[diesel(check_for_backend(diesel::pg::Pg))]
+pub(crate) struct NewStoreVersion {
+    pub store_id: i32,
+    pub history_id: i32,
 }
 
 #[derive(Queryable, Selectable, Identifiable)]
