@@ -1,8 +1,8 @@
 import styles from "./App.module.css";
-import FallbackComponent from "./FallbackComponent.jsx";
-import GameList from "./Games/GameList.jsx";
-import StoreList from "./Stores/StoreList.jsx";
-import OrderList from "./Orders/OrderList.jsx";
+import FallbackComponent from "./FallbackComponent.tsx";
+import GameList from "./Games/GameList.tsx";
+import StoreList from "./Stores/StoreList.tsx";
+import OrderList from "./Orders/OrderList.tsx";
 import {createSignal} from "solid-js";
 import {Dynamic} from "solid-js/web";
 
@@ -12,7 +12,7 @@ const App = () => {
         internal: true
     });
 
-    const onToggleHamburger = (pointerEvent) => {
+    const onToggleHamburger = (pointerEvent: MouseEvent) => {
         console.log(pointerEvent);
     };
 
