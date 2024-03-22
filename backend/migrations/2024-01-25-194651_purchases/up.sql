@@ -39,7 +39,7 @@ join orders
     on order_versions.order_id = orders.id
 where order_versions.deprecated_date is null;
 
-create table purchases
+create table game_purchases
 (
     id serial primary key,
     game_id int not null references games (id),
@@ -50,7 +50,7 @@ create table purchases
     check (amount >= 0)
 );
 
-create table purchase_versions
+create table game_purchase_versions
 (
     purchase_id int not null,
     history_id int not null,
@@ -58,7 +58,7 @@ create table purchase_versions
     deprecated_date timestamptz,
 
     primary key (purchase_id, history_id),
-    foreign key (purchase_id) references purchases (id),
+    foreign key (purchase_id) references game_purchases (id),
     foreign key (history_id) references histories (id),
     check (created_date <= clock_timestamp()),
     check (deprecated_date <= clock_timestamp()),
@@ -73,11 +73,11 @@ create table purchase_versions
         history_id with <>)
 );
 
-create view active_purchases (id, game_id, order_id, currency_id, amount) as
-select purchases.id, purchases.game_id, purchases.order_id, purchases.currency_id, purchases.amount
+create view active_game_purchases (id, game_id, order_id, currency_id, amount) as
+select game_purchases.id, game_purchases.game_id, game_purchases.order_id, game_purchases.currency_id, game_purchases.amount
 from histories
-join purchase_versions
-    on histories.id = purchase_versions.history_id
-join purchases
-    on purchase_versions.purchase_id = purchases.id
-where purchase_versions.deprecated_date is null;
+join game_purchase_versions
+    on histories.id = game_purchase_versions.history_id
+join game_purchases
+    on game_purchase_versions.purchase_id = game_purchases.id
+where game_purchase_versions.deprecated_date is null;

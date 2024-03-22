@@ -1,9 +1,10 @@
-use diesel::{Connection, ExpressionMethods, PgConnection, QueryDsl, QueryResult, RunQueryDsl, SelectableHelper};
+use diesel::{Connection, ExpressionMethods, NullableExpressionMethods, PgConnection, QueryDsl, QueryResult, RunQueryDsl, SelectableHelper};
 use diesel::associations::HasTable;
+use diesel::dsl::IsNull;
 use time::OffsetDateTime;
 
-use crate::models::{Currency, Game, GameVersion, History, NewCurrency, NewGame, NewGameVersion, NewOrder, NewPurchase, NewStore, NewStoreVersion, Order, Purchase, Store, StoreVersion};
-use crate::schema::{currency_versions, game_versions, histories, order_versions, purchase_versions, store_versions};
+use crate::models::{Currency, CurrencyVersion, Game, GamePurchase, GamePurchaseVersion, GameVersion, History, NewCurrency, NewGame, NewGamePurchase, NewGameVersion, NewOrder, NewStore, NewStoreVersion, Order, OrderVersion, Store, StoreVersion};
+use crate::schema::{currency_versions, game_purchase_versions, game_versions, histories, order_versions, store_versions};
 
 fn create_history_no_transaction(connection: &mut PgConnection) -> QueryResult<History> {
     diesel::insert_into(histories::dsl::histories)
@@ -13,15 +14,22 @@ fn create_history_no_transaction(connection: &mut PgConnection) -> QueryResult<H
 
 pub trait HasVersionsTable {
     type VersionsTable: HasTable;
+    type ActiveState: NullableExpressionMethods;
 
     fn versions_table() -> Self::VersionsTable;
+    fn only_active() -> IsNull<Self::ActiveState>;
 }
 
 impl HasVersionsTable for Game {
     type VersionsTable = game_versions::table;
+    type ActiveState = game_versions::deprecated_date;
 
     fn versions_table() -> Self::VersionsTable {
         game_versions::table
+    }
+
+    fn only_active() -> IsNull<Self::ActiveState> {
+        game_versions::deprecated_date.is_null()
     }
 }
 
@@ -30,7 +38,7 @@ impl Game {
         let connection = &mut establish_db_connection();
         Self::table()
             .inner_join(Self::versions_table())
-            .filter(game_versions::deprecated_date.is_null())
+            .filter(Self::only_active())
             .select(Self::as_select())
             .load(connection)
     }
@@ -87,19 +95,11 @@ impl Game {
     }
 }
 
-impl HasTable for GameVersion {
-    type Table = game_versions::table;
-
-    fn table() -> Self::Table {
-        game_versions::table
-    }
-}
-
 impl GameVersion {
     fn get_by_id(id: i32, connection: &mut PgConnection) -> QueryResult<Self> {
         Self::table()
             .filter(game_versions::game_id.eq(id))
-            .filter(game_versions::deprecated_date.is_null())
+            .filter(<Game as HasVersionsTable>::only_active())
             .get_result::<Self>(connection)
     }
 
@@ -119,9 +119,14 @@ impl GameVersion {
 
 impl HasVersionsTable for Store {
     type VersionsTable = store_versions::table;
+    type ActiveState = store_versions::deprecated_date;
 
     fn versions_table() -> Self::VersionsTable {
         store_versions::table
+    }
+
+    fn only_active() -> IsNull<Self::ActiveState> {
+        store_versions::deprecated_date.is_null()
     }
 }
 
@@ -130,7 +135,7 @@ impl Store {
         let connection = &mut establish_db_connection();
         Self::table()
             .inner_join(Self::versions_table())
-            .filter(store_versions::deprecated_date.is_null())
+            .filter(Self::only_active())
             .select(Self::as_select())
             .load(connection)
     }
@@ -187,6 +192,14 @@ impl Store {
     }
 }
 
+impl HasTable for GameVersion {
+    type Table = game_versions::table;
+
+    fn table() -> Self::Table {
+        game_versions::table
+    }
+}
+
 impl HasTable for StoreVersion {
     type Table = store_versions::table;
 
@@ -199,7 +212,7 @@ impl StoreVersion {
     fn get_by_id(id: i32, connection: &mut PgConnection) -> QueryResult<Self> {
         Self::table()
             .filter(store_versions::store_id.eq(id))
-            .filter(store_versions::deprecated_date.is_null())
+            .filter(<Store as HasVersionsTable>::only_active())
             .get_result::<Self>(connection)
     }
 
@@ -219,9 +232,14 @@ impl StoreVersion {
 
 impl HasVersionsTable for Currency {
     type VersionsTable = currency_versions::table;
+    type ActiveState = currency_versions::deprecated_date;
 
     fn versions_table() -> Self::VersionsTable {
         currency_versions::table
+    }
+
+    fn only_active() -> IsNull<Self::ActiveState> {
+        currency_versions::deprecated_date.is_null()
     }
 }
 
@@ -230,7 +248,7 @@ impl Currency {
         let connection = &mut establish_db_connection();
         Self::table()
             .inner_join(Self::versions_table())
-            .filter(currency_versions::deprecated_date.is_null())
+            .filter(Self::only_active())
             .select(Self::as_select())
             .load(connection)
     }
@@ -253,11 +271,24 @@ impl Currency {
     }
 }
 
+impl HasTable for CurrencyVersion {
+    type Table = currency_versions::table;
+
+    fn table() -> Self::Table {
+        currency_versions::table
+    }
+}
+
 impl HasVersionsTable for Order {
     type VersionsTable = order_versions::table;
+    type ActiveState = order_versions::deprecated_date;
 
     fn versions_table() -> Self::VersionsTable {
         order_versions::table
+    }
+
+    fn only_active() -> IsNull<Self::ActiveState> {
+        order_versions::deprecated_date.is_null()
     }
 }
 
@@ -266,7 +297,7 @@ impl Order {
         let connection = &mut establish_db_connection();
         Self::table()
             .inner_join(Self::versions_table())
-            .filter(order_versions::deprecated_date.is_null())
+            .filter(Self::only_active())
             .select(Self::as_select())
             .load(connection)
     }
@@ -289,25 +320,38 @@ impl Order {
     }
 }
 
-impl HasVersionsTable for Purchase {
-    type VersionsTable = purchase_versions::table;
+impl HasTable for OrderVersion {
+    type Table = order_versions::table;
 
-    fn versions_table() -> Self::VersionsTable {
-        purchase_versions::table
+    fn table() -> Self::Table {
+        order_versions::table
     }
 }
 
-impl Purchase {
+impl HasVersionsTable for GamePurchase {
+    type VersionsTable = game_purchase_versions::table;
+    type ActiveState = game_purchase_versions::deprecated_date;
+
+    fn versions_table() -> Self::VersionsTable {
+        game_purchase_versions::table
+    }
+
+    fn only_active() -> IsNull<Self::ActiveState> {
+        game_purchase_versions::deprecated_date.is_null()
+    }
+}
+
+impl GamePurchase {
     fn get_all() -> QueryResult<Vec<Self>> {
         let connection = &mut establish_db_connection();
         Self::table()
             .inner_join(Self::versions_table())
-            .filter(purchase_versions::deprecated_date.is_null())
+            .filter(Self::only_active())
             .select(Self::as_select())
             .load(connection)
     }
 
-    fn create(changeset: NewPurchase) -> QueryResult<Self> {
+    fn create(changeset: NewGamePurchase) -> QueryResult<Self> {
         let connection = &mut establish_db_connection();
         let purchase = connection.transaction(|conn| {
             let history = diesel::insert_into(histories::dsl::histories)
@@ -317,11 +361,19 @@ impl Purchase {
                 .values(changeset)
                 .get_result::<Self>(conn)?;
             _ = diesel::insert_into(Self::versions_table())
-                .values((purchase_versions::purchase_id.eq(purchase.id), purchase_versions::history_id.eq(history.id)))
+                .values((game_purchase_versions::purchase_id.eq(purchase.id), game_purchase_versions::history_id.eq(history.id)))
                 .execute(conn)?;
             Result::<Self, diesel::result::Error>::Ok(purchase)
         })?;
         Ok(purchase)
+    }
+}
+
+impl HasTable for GamePurchaseVersion {
+    type Table = game_purchase_versions::table;
+
+    fn table() -> Self::Table {
+        game_purchase_versions::table
     }
 }
 
